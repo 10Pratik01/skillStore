@@ -29,8 +29,12 @@ HELP.md
 # Application properties (Sensitive)
 # application-prod.properties
 
-# Frontend (Node)
-Frontend/node_modules/
+# Visualization
+Backend/graph.json
+Backend/visualizer.html
+graph.json
+visualizer.html
+
 Frontend/build/
 Frontend/dist/
 Frontend/.env.local
