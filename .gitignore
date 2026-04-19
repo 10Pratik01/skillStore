@@ -1,0 +1,39 @@
+# Java and Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+
+# IntelliJ IDEA
+.idea/
+*.iml
+out/
+gen/
+
+# VS Code
+.vscode/
+bin/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Spring Boot
+.mvn/wrapper/maven-wrapper.jar
+mvnw
+mvnw.cmd
+HELP.md
+
+# Application properties (Sensitive)
+# application-prod.properties
+
+# Frontend (Node)
+Frontend/node_modules/
+Frontend/build/
+Frontend/dist/
+Frontend/.env.local
+Frontend/.env.development.local
+Frontend/.env.test.local
+Frontend/.env.production.local
