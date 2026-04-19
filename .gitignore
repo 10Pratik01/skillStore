@@ -34,6 +34,7 @@ Backend/graph.json
 Backend/visualizer.html
 graph.json
 visualizer.html
+Backend/graphify-out
 
 Frontend/build/
 Frontend/dist/
@@ -41,3 +42,5 @@ Frontend/.env.local
 Frontend/.env.development.local
 Frontend/.env.test.local
 Frontend/.env.production.local
+Frontend/graphify-out 
+graphify-out
