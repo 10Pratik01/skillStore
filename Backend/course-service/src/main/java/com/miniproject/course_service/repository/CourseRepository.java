@@ -14,4 +14,6 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
     List<Course> findByTitleContaining(@Param("name") String name);
     
     List<Course> findByPriceLessThanEqual(Double price);
+
+    List<Course> findByInstructorId(Long instructorId);
 }

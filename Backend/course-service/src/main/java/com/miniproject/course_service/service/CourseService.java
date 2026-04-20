@@ -40,7 +40,10 @@ public class CourseService {
     }
 
     public void deleteCourse(Long id) {
-        courseRepository.deleteById(id);
+        // Soft delete (archive) instead of full delete
+        Course course = getCourseById(id);
+        course.setStatus("ARCHIVED");
+        courseRepository.save(course);
     }
 
     public List<Course> searchCourses(String query) {
@@ -67,5 +70,15 @@ public class CourseService {
         double avg = reviews.stream().mapToInt(Review::getRating).average().orElse(0.0);
         course.setAverageRating(avg);
         courseRepository.save(course);
+    }
+
+    public List<Course> getCoursesByInstructorId(Long instructorId) {
+        return courseRepository.findByInstructorId(instructorId);
+    }
+
+    public Course updateCourseStatus(Long id, String status) {
+        Course course = getCourseById(id);
+        course.setStatus(status);
+        return courseRepository.save(course);
     }
 }

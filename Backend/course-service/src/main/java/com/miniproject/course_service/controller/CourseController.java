@@ -59,4 +59,14 @@ public class CourseController {
         courseService.addReview(id, review);
         return ResponseEntity.ok("Review added successfully!");
     }
+
+    @GetMapping("/instructor/{instructorId}")
+    public List<Course> getCoursesByInstructorId(@PathVariable Long instructorId) {
+        return courseService.getCoursesByInstructorId(instructorId);
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Course> updateCourseStatus(@PathVariable Long id, @RequestParam String status) {
+        return ResponseEntity.ok(courseService.updateCourseStatus(id, status));
+    }
 }
