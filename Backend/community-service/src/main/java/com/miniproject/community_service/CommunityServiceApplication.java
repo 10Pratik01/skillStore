@@ -1,4 +1,4 @@
-package com.miniproject.assignment_service;
+package com.miniproject.community_service;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -6,9 +6,10 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
 @SpringBootApplication
 @EnableDiscoveryClient
-public class AssignmentServiceApplication {
+public class CommunityServiceApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(AssignmentServiceApplication.class, args);
-    }
+	public static void main(String[] args) {
+		SpringApplication.run(CommunityServiceApplication.class, args);
+	}
+
 }

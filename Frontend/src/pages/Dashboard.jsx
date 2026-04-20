@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { Client } from '@stomp/stompjs';
 
 const Dashboard = () => {
     const { user } = useAuth();
@@ -39,6 +40,84 @@ const Dashboard = () => {
     }, [user]);
 
     if (loading) return <div className="p-8 text-center text-primary">Loading dashboard...</div>;
+
+const CourseQA = ({ courseId, userId, userName }) => {
+    const [posts, setPosts] = useState([]);
+    const [newPost, setNewPost] = useState('');
+
+    useEffect(() => {
+        const fetchHistory = async () => {
+            try {
+                const res = await axios.get(`/api/community/course/${courseId}`);
+                setPosts(res.data);
+            } catch (err) {}
+        };
+        fetchHistory();
+
+        const stompClient = new Client({
+            webSocketFactory: () => new WebSocket('ws://localhost:8087/ws/community/websocket'),
+            reconnectDelay: 5000,
+            onConnect: () => {
+                stompClient.subscribe(`/topic/course/${courseId}`, (message) => {
+                    if (message.body) {
+                        const post = JSON.parse(message.body);
+                        setPosts(prev => [...prev, post]);
+                    }
+                });
+            }
+        });
+        stompClient.activate();
+        return () => stompClient.deactivate();
+    }, [courseId]);
+
+    const handleSend = async (e) => {
+        e.preventDefault();
+        if (!newPost.trim()) return;
+        try {
+            await axios.post(`/api/community/course/${courseId}/post`, {
+                authorId: userId,
+                authorName: userName,
+                content: newPost
+            });
+            setNewPost('');
+        } catch (err) {}
+    };
+
+    return (
+        <div className="flex flex-col h-full bg-[#1e1e1e] border-l border-white/10 w-80">
+            <div className="p-4 border-b border-white/10 bg-black/40">
+                <h3 className="font-bold text-white flex items-center gap-2">
+                    <svg className="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z" clipRule="evenodd" /></svg>
+                    Live Q&A
+                </h3>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {posts.map((p, i) => (
+                    <div key={i} className={`flex flex-col ${p.authorId === userId ? 'items-end' : 'items-start'}`}>
+                        <span className="text-[10px] text-secondary mb-1">{p.authorName}</span>
+                        <div className={`px-3 py-2 rounded-lg text-sm max-w-[90%] ${p.authorId === userId ? 'bg-primary text-white rounded-br-none' : 'bg-white/10 text-white rounded-bl-none'}`}>
+                            {p.content}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            <form onSubmit={handleSend} className="p-4 border-t border-white/10 bg-black/40 flex gap-2">
+                <input 
+                    type="text" 
+                    value={newPost}
+                    onChange={e => setNewPost(e.target.value)}
+                    className="flex-1 bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
+                    placeholder="Ask a question..."
+                />
+                <button type="submit" className="text-primary hover:text-white transition-colors">
+                    <svg className="w-6 h-6 transform rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
+                </button>
+            </form>
+        </div>
+    );
+};
 
 const StudentCoursePlayer = ({ courseId, onBack, user }) => {
     const [course, setCourse] = useState(null);
@@ -218,6 +297,7 @@ const StudentCoursePlayer = ({ courseId, onBack, user }) => {
                 <div className="flex-1 overflow-y-auto bg-black/50 relative">
                     <ActiveContent />
                 </div>
+                <CourseQA courseId={courseId} userId={user.id} userName={user.username} />
             </div>
         </div>
     );
@@ -647,6 +727,88 @@ const InstructorDashboard = ({ user }) => {
     );
 };
 
+// WebSocket Configuration & Notification Component
+
+const NotificationBell = ({ userId }) => {
+    const [notifications, setNotifications] = useState([]);
+    const [showDropdown, setShowDropdown] = useState(false);
+
+    useEffect(() => {
+        // Fetch historical unread
+        const fetchInitial = async () => {
+            try {
+                const res = await axios.get(`/api/community/notifications/user/${userId}`);
+                setNotifications(res.data);
+            } catch (err) { }
+        };
+        fetchInitial();
+
+        // Connect STOMP
+        const stompClient = new Client({
+            webSocketFactory: () => new WebSocket('ws://localhost:8087/ws/community/websocket'), // Direct to community-service
+            reconnectDelay: 5000,
+            onConnect: () => {
+                stompClient.subscribe(`/topic/notifications/${userId}`, (message) => {
+                    if (message.body) {
+                        const newNotif = JSON.parse(message.body);
+                        setNotifications(prev => [newNotif, ...prev]);
+                    }
+                });
+            }
+        });
+        stompClient.activate();
+
+        return () => { stompClient.deactivate(); };
+    }, [userId]);
+
+    const handleMarkAsRead = async (id) => {
+        try {
+            await axios.patch(`/api/community/notifications/read/${id}`);
+            setNotifications(prev => prev.filter(n => n.id !== id));
+        } catch (e) {}
+    };
+
+    return (
+        <div className="relative">
+            <button onClick={() => setShowDropdown(!showDropdown)} className="relative p-2 text-secondary hover:text-white transition-colors">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                {notifications.length > 0 && (
+                    <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                        {notifications.length}
+                    </span>
+                )}
+            </button>
+
+            {showDropdown && (
+                <div className="absolute right-0 mt-2 w-80 bg-[#121212] border border-white/10 rounded-lg shadow-2xl z-50 overflow-hidden slide-up">
+                    <div className="p-3 bg-white/5 border-b border-white/10 flex justify-between items-center">
+                        <h4 className="text-sm font-bold text-white">Notifications</h4>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                        {notifications.length === 0 ? (
+                            <div className="p-4 text-center text-xs text-secondary">No new notifications</div>
+                        ) : (
+                            notifications.map(n => (
+                                <div key={n.id} className="p-3 border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer" onClick={() => handleMarkAsRead(n.id)}>
+                                    <div className="flex gap-2 items-start">
+                                        <div className="bg-primary/20 p-1.5 rounded text-primary">
+                                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" /></svg>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-white mb-1 line-clamp-2">{n.message}</p>
+                                            <p className="text-[10px] text-secondary">{new Date(n.timestamp).toLocaleTimeString()}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const Dashboard = () => {
     const { user } = useAuth();
     const [enrollments, setEnrollments] = useState([]);
@@ -712,8 +874,13 @@ const Dashboard = () => {
 
     return (
         <div className="p-8 max-w-7xl mx-auto">
-            <h2 className="text-3xl font-bold text-white mb-2">Welcome, {user?.username}</h2>
-            <p className="text-secondary mb-8">Manage your learning journey.</p>
+            <div className="flex justify-between items-start mb-6">
+                <div>
+                    <h2 className="text-3xl font-bold text-white mb-2">Welcome, {user?.username}</h2>
+                    <p className="text-secondary">Manage your learning journey.</p>
+                </div>
+                <NotificationBell userId={user?.id || 1} />
+            </div>
             
             <div className="flex gap-4 mb-6 border-b border-white/10 pb-2">
                 <button 
