@@ -25,7 +25,10 @@ public class OrderService {
     @Autowired
     private CourseClient courseClient;
 
-    public String enrollInCourse(Long studentId, Long courseId) {
+    @Autowired
+    private com.miniproject.order_service.repository.CouponRepository couponRepository;
+
+    public String enrollInCourse(Long studentId, Long courseId, String couponCode) {
         // 1. Check if already enrolled
         if (enrollmentRepository.findByStudentIdAndCourseId(studentId, courseId).isPresent()) {
             return "Error: Already enrolled in this course.";
@@ -39,13 +42,38 @@ public class OrderService {
             return "Error: Course not found.";
         }
 
+        // 2.5 Calculate discount via Coupon
+        double discountAmount = 0.0;
+        if (couponCode != null && !couponCode.trim().isEmpty()) {
+            var optCoupon = couponRepository.findByCode(couponCode);
+            if (optCoupon.isPresent()) {
+                var coupon = optCoupon.get();
+                if (coupon.getMaxUses() == null || coupon.getUsedCount() < coupon.getMaxUses()) {
+                    if (coupon.getCourseId() == null || coupon.getCourseId().equals(courseId)) {
+                        coupon.setUsedCount(coupon.getUsedCount() + 1);
+                        couponRepository.save(coupon);
+                        if ("PERCENTAGE".equalsIgnoreCase(coupon.getType())) {
+                            discountAmount = course.getPrice() * (coupon.getValue() / 100.0);
+                        } else {
+                            discountAmount = coupon.getValue();
+                        }
+                    }
+                }
+            }
+        }
+        
+        Double finalAmount = course.getPrice() - discountAmount;
+        if (finalAmount < 0) finalAmount = 0.0;
+
         // 3. Mock Payment Simulation
         Transaction transaction = Transaction.builder()
                 .studentId(studentId)
                 .courseId(courseId)
-                .amount(course.getPrice())
+                .amount(finalAmount)
                 .status("SUCCESS")
                 .transactionId(UUID.randomUUID().toString())
+                .couponCode(couponCode)
+                .discountAmount(discountAmount)
                 .timestamp(LocalDateTime.now())
                 .build();
         
@@ -67,7 +95,30 @@ public class OrderService {
         return enrollmentRepository.findByStudentId(studentId);
     }
 
-    public List<Transaction> getStudentTransactions(Long studentId) {
-        return transactionRepository.findByStudentId(studentId);
+    @Autowired
+    private com.miniproject.order_service.repository.LessonProgressRepository lessonProgressRepository;
+
+    public String markLessonComplete(Long studentId, Long courseId, Long lessonId) {
+        var opt = lessonProgressRepository.findByStudentIdAndLessonId(studentId, lessonId);
+        if (opt.isEmpty()) {
+            var progress = com.miniproject.order_service.entity.LessonProgress.builder()
+                    .studentId(studentId)
+                    .courseId(courseId)
+                    .lessonId(lessonId)
+                    .completed(true)
+                    .completedAt(LocalDateTime.now())
+                    .build();
+            lessonProgressRepository.save(progress);
+        } else {
+            var progress = opt.get();
+            progress.setCompleted(true);
+            progress.setCompletedAt(LocalDateTime.now());
+            lessonProgressRepository.save(progress);
+        }
+        return "Lesson marked complete";
+    }
+
+    public List<com.miniproject.order_service.entity.LessonProgress> getCourseProgress(Long studentId, Long courseId) {
+        return lessonProgressRepository.findByStudentIdAndCourseId(studentId, courseId);
     }
 }

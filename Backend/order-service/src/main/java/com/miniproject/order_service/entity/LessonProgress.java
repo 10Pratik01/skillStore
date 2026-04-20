@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Transaction {
+public class LessonProgress {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -18,12 +18,8 @@ public class Transaction {
 
     private Long studentId;
     private Long courseId;
-    private Double amount;
-    private String status; // SUCCESS, FAILED
-    private String transactionId; // Mock ID
-    
-    private String couponCode;
-    private Double discountAmount = 0.0;
-    
-    private LocalDateTime timestamp;
+    private Long lessonId;
+
+    private boolean completed;
+    private LocalDateTime completedAt;
 }

@@ -2,6 +2,8 @@ package com.miniproject.course_service.controller;
 
 import com.miniproject.course_service.entity.Course;
 import com.miniproject.course_service.entity.Review;
+import com.miniproject.course_service.entity.Section;
+import com.miniproject.course_service.entity.Lesson;
 import com.miniproject.course_service.service.CourseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -68,5 +70,15 @@ public class CourseController {
     @PatchMapping("/{id}/status")
     public ResponseEntity<Course> updateCourseStatus(@PathVariable Long id, @RequestParam String status) {
         return ResponseEntity.ok(courseService.updateCourseStatus(id, status));
+    }
+
+    @PostMapping("/{id}/sections")
+    public ResponseEntity<Section> addSection(@PathVariable Long id, @RequestBody Section section) {
+        return new ResponseEntity<>(courseService.addSection(id, section), HttpStatus.CREATED);
+    }
+
+    @PostMapping("/sections/{sectionId}/lessons")
+    public ResponseEntity<Lesson> addLesson(@PathVariable Long sectionId, @RequestBody Lesson lesson) {
+        return new ResponseEntity<>(courseService.addLesson(sectionId, lesson), HttpStatus.CREATED);
     }
 }

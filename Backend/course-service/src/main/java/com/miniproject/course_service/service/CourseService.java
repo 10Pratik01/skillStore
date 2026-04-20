@@ -18,6 +18,12 @@ public class CourseService {
     @Autowired
     private ReviewRepository reviewRepository;
 
+    @Autowired
+    private com.miniproject.course_service.repository.SectionRepository sectionRepository;
+
+    @Autowired
+    private com.miniproject.course_service.repository.LessonRepository lessonRepository;
+
     public List<Course> getAllCourses() {
         return courseRepository.findAll();
     }
@@ -80,5 +86,24 @@ public class CourseService {
         Course course = getCourseById(id);
         course.setStatus(status);
         return courseRepository.save(course);
+    }
+
+    public Section addSection(Long courseId, com.miniproject.course_service.entity.Section section) {
+        Course course = getCourseById(courseId);
+        section.setCourse(course);
+        if (section.getOrderNum() == null) {
+            section.setOrderNum(course.getSections() == null ? 1 : course.getSections().size() + 1);
+        }
+        return sectionRepository.save(section);
+    }
+
+    public Lesson addLesson(Long sectionId, com.miniproject.course_service.entity.Lesson lesson) {
+        com.miniproject.course_service.entity.Section section = sectionRepository.findById(sectionId)
+                .orElseThrow(() -> new RuntimeException("Section not found"));
+        lesson.setSection(section);
+        if (lesson.getOrderNum() == null) {
+            lesson.setOrderNum(section.getLessons() == null ? 1 : section.getLessons().size() + 1);
+        }
+        return lessonRepository.save(lesson);
     }
 }

@@ -17,8 +17,8 @@ public class OrderController {
     private OrderService orderService;
 
     @PostMapping("/enroll")
-    public ResponseEntity<String> enroll(@RequestParam Long studentId, @RequestParam Long courseId) {
-        String result = orderService.enrollInCourse(studentId, courseId);
+    public ResponseEntity<String> enroll(@RequestParam Long studentId, @RequestParam Long courseId, @RequestParam(required = false) String couponCode) {
+        String result = orderService.enrollInCourse(studentId, courseId, couponCode);
         if (result.startsWith("Error")) {
             return ResponseEntity.badRequest().body(result);
         }
@@ -33,5 +33,15 @@ public class OrderController {
     @GetMapping("/student/{studentId}/transactions")
     public List<Transaction> getTransactions(@PathVariable Long studentId) {
         return orderService.getStudentTransactions(studentId);
+    }
+
+    @PostMapping("/student/{studentId}/progress/{courseId}/{lessonId}")
+    public ResponseEntity<String> markLessonComplete(@PathVariable Long studentId, @PathVariable Long courseId, @PathVariable Long lessonId) {
+        return ResponseEntity.ok(orderService.markLessonComplete(studentId, courseId, lessonId));
+    }
+
+    @GetMapping("/student/{studentId}/progress/{courseId}")
+    public ResponseEntity<?> getCourseProgress(@PathVariable Long studentId, @PathVariable Long courseId) {
+        return ResponseEntity.ok(orderService.getCourseProgress(studentId, courseId));
     }
 }
