@@ -40,6 +40,291 @@ const Dashboard = () => {
 
     if (loading) return <div className="p-8 text-center text-primary">Loading dashboard...</div>;
 
+const StudentCoursePlayer = ({ courseId, onBack, user }) => {
+    const [course, setCourse] = useState(null);
+    const [assignments, setAssignments] = useState([]);
+    const [quizzes, setQuizzes] = useState([]);
+    const [activeLesson, setActiveLesson] = useState(null);
+    const [submissionText, setSubmissionText] = useState('');
+    const [quizAnswers, setQuizAnswers] = useState({});
+    
+    useEffect(() => {
+        const fetchContent = async () => {
+            try {
+                const [cRes, aRes, qRes] = await Promise.all([
+                    axios.get(`/api/courses/${courseId}`),
+                    axios.get(`/api/assignments/course/${courseId}`),
+                    axios.get(`/api/quizzes/course/${courseId}`)
+                ]);
+                setCourse(cRes.data);
+                setAssignments(aRes.data);
+                setQuizzes(qRes.data);
+            } catch (err) {
+                console.error("Failed to load course player context", err);
+            }
+        };
+        fetchContent();
+    }, [courseId]);
+
+    const handleAssignmentSubmit = async (assignmentId) => {
+        try {
+            await axios.post(`/api/assignments/${assignmentId}/submit`, {
+                studentId: user.id,
+                courseId: courseId,
+                textContent: submissionText
+            });
+            alert("Assignment Submitted successfully!");
+            setSubmissionText('');
+        } catch (e) {
+            console.error(e);
+            alert("Error submitting assignment");
+        }
+    };
+
+    const handleQuizSubmit = async (quiz) => {
+        try {
+            // Need to fetch questions to know correct answers for score parsing...
+            // Mock: Auto scoring 100% since Question components will be built next phase.
+            const percent = 100;
+            
+            await axios.post(`/api/quizzes/${quiz.id}/attempt`, {
+                studentId: user.id,
+                courseId: courseId,
+                scorePercent: percent
+            });
+            alert(`Quiz completed! You scored ${percent}%`);
+        } catch (e) {
+            console.error(e);
+            alert("Error submitting quiz");
+        }
+    };
+
+    if (!course) return <div className="text-secondary text-center p-8">Loading course player...</div>;
+
+    const ActiveContent = () => {
+        if (!activeLesson) return <div className="p-8 text-center text-secondary border-2 border-dashed border-white/10 rounded-xl m-4">Select a lesson to begin.</div>;
+
+        if (activeLesson.type === 'video') {
+            return (
+                <div className="p-6">
+                    <h3 className="text-2xl font-bold text-white mb-4">{activeLesson.title}</h3>
+                    <div className="aspect-video bg-black rounded-xl border border-white/10 flex items-center justify-center relative overflow-hidden">
+                        {activeLesson.videoUrl ? (
+                            <div className="text-secondary text-sm">Video Player Wrapper <br/><span className="text-primary">{activeLesson.videoUrl}</span></div>
+                        ) : (
+                            <div className="text-secondary opacity-50 flex flex-col items-center">
+                                <svg className="w-16 h-16 mb-2" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                <span>No Video Resource Provided</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        if (activeLesson.type === 'text') {
+            return (
+                <div className="p-6">
+                    <h3 className="text-2xl font-bold text-white mb-4">{activeLesson.title}</h3>
+                    <div className="glass p-6 text-white whitespace-pre-wrap leading-relaxed border-t-4 border-t-primary">
+                        {activeLesson.content}
+                    </div>
+                </div>
+            );
+        }
+
+        if (activeLesson.type === 'assignment') {
+            const assignmentData = assignments.find(a => a.lessonId === activeLesson.id) || { instructions: activeLesson.content || 'Please submit your work below.' };
+            return (
+                <div className="p-6">
+                    <h3 className="text-2xl font-bold text-white mb-4">{activeLesson.title} (Assignment)</h3>
+                    <div className="glass p-6 text-white mb-6 border-l-4 border-l-yellow-500 bg-yellow-500/5">
+                        <strong className="text-yellow-500 mb-2 block">Instructions:</strong>
+                        {assignmentData.instructions}
+                    </div>
+                    
+                    <div className="bg-black/30 p-6 border border-white/10 rounded-xl shadow-inner">
+                        <h4 className="text-sm font-bold text-white mb-3 tracking-wide">Your Submission</h4>
+                        <textarea 
+                            value={submissionText} 
+                            onChange={e => setSubmissionText(e.target.value)} 
+                            className="w-full h-40 bg-white/5 border border-white/10 rounded-lg p-4 text-white focus:border-primary focus:outline-none transition-colors mb-4"
+                            placeholder="Type your answer here..."
+                        ></textarea>
+                        <button onClick={() => handleAssignmentSubmit(assignmentData.id)} disabled={!submissionText} className="btn-primary py-3 w-full disabled:opacity-50">Submit Assignment</button>
+                    </div>
+                </div>
+            );
+        }
+        
+        if (activeLesson.type === 'quiz') {
+            const quizData = quizzes.find(q => q.lessonId === activeLesson.id);
+            return (
+                <div className="p-6">
+                    <h3 className="text-2xl font-bold text-white mb-4">{activeLesson.title} (Quiz)</h3>
+                    <div className="glass p-8 text-center border-t-4 border-t-purple-500">
+                        <svg className="w-16 h-16 mx-auto mb-4 text-purple-400 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg>
+                        <p className="text-secondary mb-6">You are about to start a quiz. Make sure you have reviewed the material in this section before proceeding.</p>
+                        <button onClick={() => {
+                             if(quizData) handleQuizSubmit(quizData);
+                        }} className="btn-secondary px-8 py-3">Start Quiz Assessment</button>
+                    </div>
+                </div>
+            );
+        }
+
+        return null;
+    };
+
+    return (
+        <div className="max-w-7xl mx-auto h-[90vh] flex flex-col bg-black">
+            <div className="glass flex items-center justify-between p-4 z-10 sticky top-0 border-b border-white/5 rounded-none shadow-xl">
+                <div className="flex items-center gap-4">
+                    <button onClick={onBack} className="text-secondary hover:text-white transition-colors bg-white/5 p-2 rounded-full">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                    </button>
+                    <h2 className="text-xl font-bold text-white">{course.title}</h2>
+                </div>
+            </div>
+            
+            <div className="flex flex-1 overflow-hidden">
+                <div className="w-80 bg-white/5 border-r border-white/10 overflow-y-auto flex-shrink-0">
+                    <div className="p-4">
+                        <h4 className="text-sm font-bold text-secondary uppercase tracking-wider mb-4">Course Content</h4>
+                        <div className="space-y-4">
+                            {course.sections?.map((section, sIdx) => (
+                                <div key={section.id} className="space-y-1">
+                                    <h5 className="text-white font-semibold text-sm px-2 py-1 bg-white/5 rounded">{sIdx + 1}. {section.title}</h5>
+                                    <div className="pl-2 space-y-1 mt-1">
+                                        {section.lessons?.map((lesson, lIdx) => (
+                                            <button 
+                                                key={lesson.id} 
+                                                onClick={() => setActiveLesson(lesson)}
+                                                className={`w-full text-left px-3 py-2 text-sm rounded transition-colors flex items-center gap-3 ${activeLesson?.id === lesson.id ? 'bg-primary/20 text-white font-bold border-l-2 border-primary' : 'text-secondary hover:bg-white/5 hover:text-white'}`}
+                                            >
+                                                {lesson.type === 'video' && <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>}
+                                                {lesson.type === 'text' && <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>}
+                                                {lesson.type === 'assignment' && <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>}
+                                                {lesson.type === 'quiz' && <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>}
+                                                <span className="truncate">{lIdx + 1}. {lesson.title}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+                <div className="flex-1 overflow-y-auto bg-black/50 relative">
+                    <ActiveContent />
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const InstructorGradingQueue = ({ courseId }) => {
+    const [assignments, setAssignments] = useState([]);
+    const [submissions, setSubmissions] = useState([]);
+    const [gradingSubId, setGradingSubId] = useState(null);
+    const [gradeScore, setGradeScore] = useState(100);
+    const [gradeFeedback, setGradeFeedback] = useState('');
+
+    useEffect(() => {
+        const fetchGradingData = async () => {
+            try {
+                const assnRes = await axios.get(`/api/assignments/course/${courseId}`);
+                if (!assnRes.data || assnRes.data.length === 0) return;
+                setAssignments(assnRes.data);
+                
+                // Fetch submissions for all assignments in this course
+                let allSubs = [];
+                for (let a of assnRes.data) {
+                    const subRes = await axios.get(`/api/assignments/${a.id}/submissions`);
+                    // Map assignment title into submission for easy display
+                    const mapped = subRes.data.map(s => ({ ...s, assignmentTitle: a.title, maxScore: a.maxScore }));
+                    allSubs = [...allSubs, ...mapped];
+                }
+                setSubmissions(allSubs);
+            } catch (error) {
+                console.error("Failed fetching grading queue", error);
+            }
+        };
+        fetchGradingData();
+    }, [courseId]);
+
+    const handleGradeSubmission = async (e) => {
+        e.preventDefault();
+        try {
+            await axios.patch(`/api/assignments/submissions/${gradingSubId}/grade`, {
+                score: gradeScore,
+                feedback: gradeFeedback
+            });
+            // Update local state without fetching again
+            setSubmissions(subs => subs.map(s => s.id === gradingSubId ? {...s, status: 'GRADED', score: gradeScore, feedback: gradeFeedback} : s));
+            setGradingSubId(null);
+            setGradeScore(100);
+            setGradeFeedback('');
+        } catch (error) {
+            console.error("Failed to grade", error);
+        }
+    };
+
+    if (assignments.length === 0) return <div className="text-secondary text-sm">No assignments exist in this course.</div>;
+    if (submissions.length === 0) return <div className="text-secondary text-sm">No student submissions yet.</div>;
+
+    return (
+        <div className="space-y-4">
+            {submissions.map(sub => (
+                <div key={sub.id} className="bg-white/5 border border-white/10 p-4 rounded-lg">
+                    <div className="flex justify-between items-start mb-2">
+                        <div>
+                            <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded inline-block mb-1 ${sub.status==='SUBMITTED' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}`}>
+                                {sub.status}
+                            </span>
+                            <h4 className="text-white font-bold">{sub.assignmentTitle}</h4>
+                            <p className="text-xs text-secondary">Student ID: {sub.studentId}</p>
+                        </div>
+                        {sub.status === 'SUBMITTED' && (
+                            <button onClick={() => {setGradingSubId(sub.id); setGradeScore(sub.maxScore);}} className="text-xs btn-primary px-3 py-1">Grade</button>
+                        )}
+                    </div>
+                    <div className="bg-black/20 p-3 rounded text-sm text-white font-mono mt-2 mb-2 whitespace-pre-wrap">
+                        {sub.textContent}
+                    </div>
+                    
+                    {sub.status === 'GRADED' && (
+                        <div className="border-t border-white/10 pt-2 mt-2">
+                            <span className="text-green-400 font-bold block">Score: {sub.score} / {sub.maxScore}</span>
+                            <span className="text-secondary text-xs italic">Feedback: {sub.feedback}</span>
+                        </div>
+                    )}
+
+                    {gradingSubId === sub.id && (
+                        <form onSubmit={handleGradeSubmission} className="slide-up bg-black/40 p-4 rounded mt-2 border border-primary/30">
+                            <h5 className="text-sm font-bold text-white mb-2">Grade Submission</h5>
+                            <div className="flex gap-4 mb-2">
+                                <div className="w-24">
+                                    <label className="text-xs text-secondary">Score</label>
+                                    <input type="number" max={sub.maxScore} min={0} value={gradeScore} onChange={e=>setGradeScore(e.target.value)} className="w-full bg-white/10 rounded px-2 py-1 text-white text-sm" />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="text-xs text-secondary">Instructor Feedback</label>
+                                    <input type="text" value={gradeFeedback} onChange={e=>setGradeFeedback(e.target.value)} className="w-full bg-white/10 rounded px-2 py-1 text-white text-sm" placeholder="Great job..." />
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-2 mt-3">
+                                <button type="button" onClick={() => setGradingSubId(null)} className="text-xs text-secondary hover:text-white px-2">Cancel</button>
+                                <button type="submit" className="text-xs btn-primary px-4 py-1">Submit Grade</button>
+                            </div>
+                        </form>
+                    )}
+                </div>
+            ))}
+        </div>
+    );
+};
+
 const InstructorDashboard = ({ user }) => {
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -111,7 +396,28 @@ const InstructorDashboard = ({ user }) => {
     const handleAddLesson = async (e, sectionId) => {
         e.preventDefault();
         try {
-            await axios.post(`/api/courses/sections/${sectionId}/lessons`, lessonData);
+            const resLesson = await axios.post(`/api/courses/sections/${sectionId}/lessons`, lessonData);
+            const createdLesson = resLesson.data;
+
+            // Optional branch to the Assignment/Quiz Service
+            if (lessonData.type === 'assignment') {
+                await axios.post('/api/assignments', {
+                    lessonId: createdLesson.id,
+                    courseId: managingCourse.id,
+                    instructorId: user.id,
+                    title: lessonData.title,
+                    instructions: lessonData.content,
+                    maxScore: 100
+                });
+            } else if (lessonData.type === 'quiz') {
+                 await axios.post('/api/quizzes', {
+                    lessonId: createdLesson.id,
+                    courseId: managingCourse.id,
+                    title: lessonData.title,
+                    passScorePercent: 80
+                 });
+            }
+
             setAddingLessonForSection(null);
             setLessonData({ title: '', type: 'video', videoUrl: '', content: '' });
             
@@ -207,12 +513,21 @@ const InstructorDashboard = ({ user }) => {
                                                     <select value={lessonData.type} onChange={e => setLessonData({...lessonData, type: e.target.value})} className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-primary">
                                                         <option value="video">Video</option>
                                                         <option value="text">Article / Text</option>
+                                                        <option value="assignment">Assignment</option>
+                                                        <option value="quiz">Quiz</option>
                                                     </select>
                                                 </div>
-                                                {lessonData.type === 'video' ? (
+                                                {lessonData.type === 'video' && (
                                                     <input type="text" placeholder="Video URL (S3, YouTube, etc)" value={lessonData.videoUrl} onChange={e => setLessonData({...lessonData, videoUrl: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-primary" />
-                                                ) : (
+                                                )}
+                                                {lessonData.type === 'text' && (
                                                     <textarea placeholder="Lesson Content..." value={lessonData.content} onChange={e => setLessonData({...lessonData, content: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-primary h-24"></textarea>
+                                                )}
+                                                {lessonData.type === 'assignment' && (
+                                                    <textarea placeholder="Assignment Instructions..." value={lessonData.content} onChange={e => setLessonData({...lessonData, content: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-primary h-24"></textarea>
+                                                )}
+                                                {lessonData.type === 'quiz' && (
+                                                    <textarea placeholder="Quiz JSON details (Temporary)..." value={lessonData.content} onChange={e => setLessonData({...lessonData, content: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-primary h-24"></textarea>
                                                 )}
                                                 <button type="submit" className="btn-primary w-full py-2 text-sm">Save Lesson</button>
                                             </form>
@@ -225,6 +540,12 @@ const InstructorDashboard = ({ user }) => {
                                 </div>
                             ))
                         )}
+                        
+                        {/* Instructor Grading Queue Section */}
+                        <div className="glass mt-12 p-6 slide-up">
+                            <h3 className="text-xl font-bold text-white mb-6 border-b border-white/10 pb-4">Submissions Grading Queue</h3>
+                            <InstructorGradingQueue courseId={managingCourse.id} />
+                        </div>
                     </div>
                     
                     <div className="space-y-6">
@@ -333,6 +654,7 @@ const Dashboard = () => {
     const [progressData, setProgressData] = useState({});
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('courses');
+    const [activeCoursePlayer, setActiveCoursePlayer] = useState(null);
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -384,6 +706,10 @@ const Dashboard = () => {
         return <InstructorDashboard user={user} />;
     }
 
+    if (activeCoursePlayer) {
+        return <StudentCoursePlayer courseId={activeCoursePlayer} onBack={() => setActiveCoursePlayer(null)} user={user} />;
+    }
+
     return (
         <div className="p-8 max-w-7xl mx-auto">
             <h2 className="text-3xl font-bold text-white mb-2">Welcome, {user?.username}</h2>
@@ -425,7 +751,7 @@ const Dashboard = () => {
                                         </div>
                                     </div>
                                 </div>
-                                <button className="btn-secondary w-full py-2 text-sm mt-4">Go to Course</button>
+                                <button onClick={() => setActiveCoursePlayer(enrollment.courseId)} className="btn-secondary w-full py-2 text-sm mt-4">Go to Course</button>
                             </div>
                         ))
                     )}
@@ -471,5 +797,5 @@ const Dashboard = () => {
         </div>
     );
 };
-
-export default Dashboard;
+}
+export default Dashboard

@@ -95,6 +95,10 @@ public class OrderService {
         return enrollmentRepository.findByStudentId(studentId);
     }
 
+    public List<Transaction> getStudentTransactions(Long studentId) {
+        return transactionRepository.findByStudentId(studentId);
+    }
+
     @Autowired
     private com.miniproject.order_service.repository.LessonProgressRepository lessonProgressRepository;
 

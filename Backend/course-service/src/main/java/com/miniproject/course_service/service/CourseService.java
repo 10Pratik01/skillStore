@@ -2,6 +2,8 @@ package com.miniproject.course_service.service;
 
 import com.miniproject.course_service.entity.Course;
 import com.miniproject.course_service.entity.Review;
+import com.miniproject.course_service.entity.Section;
+import com.miniproject.course_service.entity.Lesson;
 import com.miniproject.course_service.repository.CourseRepository;
 import com.miniproject.course_service.repository.ReviewRepository;
 import org.springframework.beans.factory.annotation.Autowired;

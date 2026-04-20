@@ -15,6 +15,7 @@
         <module>user-service</module>
         <module>course-service</module>
         <module>order-service</module>
+        <module>assignment-service</module>
     </modules>
 
 </project>
