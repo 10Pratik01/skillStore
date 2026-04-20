@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
 
+import com.miniproject.course_service.entity.Section;
+import com.miniproject.course_service.entity.Review;
+
 @Entity
 @Getter
 @Setter

@@ -9,7 +9,10 @@ import com.miniproject.course_service.repository.ReviewRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class CourseService {
@@ -78,6 +81,38 @@ public class CourseService {
         double avg = reviews.stream().mapToInt(Review::getRating).average().orElse(0.0);
         course.setAverageRating(avg);
         courseRepository.save(course);
+    }
+
+    public List<Review> getReviewsForCourse(Long courseId) {
+        return reviewRepository.findByCourseId(courseId);
+    }
+
+    public List<Course> searchAndFilter(String query, String category) {
+        if (query != null && !query.isBlank() && category != null && !category.isBlank()) {
+            // Both filters: search by title AND match category
+            return courseRepository.findByTitleContaining(query).stream()
+                    .filter(c -> category.equalsIgnoreCase(c.getCategory()))
+                    .toList();
+        } else if (query != null && !query.isBlank()) {
+            return courseRepository.findByTitleContaining(query);
+        } else if (category != null && !category.isBlank()) {
+            return courseRepository.findByCategory(category);
+        }
+        return courseRepository.findAll();
+    }
+
+    public List<Map<String, Object>> getInstructorAnalytics(Long instructorId) {
+        List<Course> courses = courseRepository.findByInstructorId(instructorId);
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Course course : courses) {
+            Map<String, Object> row = new HashMap<>();
+            row.put("courseId", course.getId());
+            row.put("title", course.getTitle());
+            row.put("averageRating", course.getAverageRating() != null ? course.getAverageRating() : 0.0);
+            row.put("reviewCount", reviewRepository.findByCourseId(course.getId()).size());
+            result.add(row);
+        }
+        return result;
     }
 
     public List<Course> getCoursesByInstructorId(Long instructorId) {

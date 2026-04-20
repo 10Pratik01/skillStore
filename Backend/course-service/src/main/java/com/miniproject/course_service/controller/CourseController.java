@@ -6,10 +6,12 @@ import com.miniproject.course_service.entity.Section;
 import com.miniproject.course_service.entity.Lesson;
 import com.miniproject.course_service.service.CourseService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/courses")
@@ -44,16 +46,12 @@ public class CourseController {
         return ResponseEntity.noContent().build();
     }
 
+    // Unified search+filter endpoint (replaces old /search and /filter)
     @GetMapping("/search")
-    public List<Course> searchCourses(@RequestParam String q) {
-        return courseService.searchCourses(q);
-    }
-
-    @GetMapping("/filter")
-    public List<Course> filterCourses(
-            @RequestParam(required = false) String category,
-            @RequestParam(required = false) Double maxPrice) {
-        return courseService.filterCourses(category, maxPrice);
+    public List<Course> searchCourses(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String category) {
+        return courseService.searchAndFilter(q, category);
     }
 
     @PostMapping("/{id}/reviews")
@@ -62,9 +60,19 @@ public class CourseController {
         return ResponseEntity.ok("Review added successfully!");
     }
 
+    @GetMapping("/{id}/reviews")
+    public List<Review> getCourseReviews(@PathVariable Long id) {
+        return courseService.getReviewsForCourse(id);
+    }
+
     @GetMapping("/instructor/{instructorId}")
     public List<Course> getCoursesByInstructorId(@PathVariable Long instructorId) {
         return courseService.getCoursesByInstructorId(instructorId);
+    }
+
+    @GetMapping("/instructor/{instructorId}/analytics")
+    public List<Map<String, Object>> getInstructorAnalytics(@PathVariable Long instructorId) {
+        return courseService.getInstructorAnalytics(instructorId);
     }
 
     @PatchMapping("/{id}/status")
