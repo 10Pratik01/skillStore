@@ -20,8 +20,8 @@ public class NotificationController {
     private SimpMessagingTemplate messagingTemplate;
 
     @GetMapping("/user/{userId}")
-    public List<Notification> getUnreadNotifications(@PathVariable Long userId) {
-        return notificationRepository.findByUserIdAndIsReadFalseOrderByTimestampDesc(userId);
+    public List<Notification> getAllNotifications(@PathVariable Long userId) {
+        return notificationRepository.findByUserIdOrderByTimestampDesc(userId);
     }
 
     @PatchMapping("/read/{id}")

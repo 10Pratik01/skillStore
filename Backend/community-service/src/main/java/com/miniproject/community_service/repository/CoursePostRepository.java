@@ -6,4 +6,6 @@ import java.util.List;
 
 public interface CoursePostRepository extends JpaRepository<CoursePost, Long> {
     List<CoursePost> findByCourseIdOrderByTimestampAsc(Long courseId);
+    List<CoursePost> findByAuthorIdOrderByTimestampDesc(Long authorId);
 }
+

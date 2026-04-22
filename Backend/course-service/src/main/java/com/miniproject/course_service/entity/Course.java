@@ -4,9 +4,6 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
 
-import com.miniproject.course_service.entity.Section;
-import com.miniproject.course_service.entity.Review;
-
 @Entity
 @Getter
 @Setter
@@ -22,6 +19,8 @@ public class Course {
     @Column(nullable = false)
     private String title;
 
+    private String subtitle;
+
     @Column(columnDefinition = "TEXT")
     private String description;
 
@@ -29,15 +28,20 @@ public class Course {
     private Double price;
 
     private String category;
-
-    private String status = "DRAFT"; // DRAFT, REVIEW, PUBLISHED, ARCHIVED
-    private String level; 
+    private String status = "DRAFT"; // DRAFT, PUBLISHED, ARCHIVED
+    private String level;
     private String language;
     private String thumbnailUrl;
 
-    private Long instructorId; // ID of the user from user-service
+    // Access control
+    private String accessType = "PUBLIC"; // PUBLIC | PASSWORD_PROTECTED | INVITE_ONLY
+    private String accessCode;             // only used when PASSWORD_PROTECTED
+
+    private Long instructorId;
+    private String instructorName;
 
     private Double averageRating = 0.0;
+    private Integer enrollmentCount = 0;
 
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
     private List<Section> sections;
@@ -45,3 +49,4 @@ public class Course {
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
     private List<Review> reviews;
 }
+

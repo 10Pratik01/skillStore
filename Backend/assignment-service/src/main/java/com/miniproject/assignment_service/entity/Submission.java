@@ -23,13 +23,16 @@ public class Submission {
     @Column(columnDefinition = "TEXT")
     private String textContent;
 
+    private String fileUrl; // for file-upload assignments
+
     private String status = "SUBMITTED"; // SUBMITTED, GRADED, LATE
-    
+
     private Integer score;
-    
+
     @Column(columnDefinition = "TEXT")
     private String feedback;
 
     private LocalDateTime submittedAt = LocalDateTime.now();
     private LocalDateTime gradedAt;
 }
+

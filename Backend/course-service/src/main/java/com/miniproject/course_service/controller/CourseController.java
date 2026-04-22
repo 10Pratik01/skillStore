@@ -1,9 +1,9 @@
 package com.miniproject.course_service.controller;
 
 import com.miniproject.course_service.entity.Course;
+import com.miniproject.course_service.entity.Lesson;
 import com.miniproject.course_service.entity.Review;
 import com.miniproject.course_service.entity.Section;
-import com.miniproject.course_service.entity.Lesson;
 import com.miniproject.course_service.service.CourseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -15,15 +15,15 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/courses")
+@CrossOrigin(origins = "*")
 public class CourseController {
 
     @Autowired
     private CourseService courseService;
 
+    // ── Course CRUD ───────────────────────────────────────────────────────────
     @GetMapping
-    public List<Course> getAllCourses() {
-        return courseService.getAllCourses();
-    }
+    public List<Course> getAllCourses() { return courseService.getAllCourses(); }
 
     @GetMapping("/{id}")
     public ResponseEntity<Course> getCourseById(@PathVariable Long id) {
@@ -46,7 +46,7 @@ public class CourseController {
         return ResponseEntity.noContent().build();
     }
 
-    // Unified search+filter endpoint (replaces old /search and /filter)
+    // ── Search ────────────────────────────────────────────────────────────────
     @GetMapping("/search")
     public List<Course> searchCourses(
             @RequestParam(required = false) String q,
@@ -58,6 +58,7 @@ public class CourseController {
         return courseService.searchAndFilter(q, category, level, language, maxPrice, minRating);
     }
 
+    // ── Reviews ───────────────────────────────────────────────────────────────
     @PostMapping("/{id}/reviews")
     public ResponseEntity<String> addReview(@PathVariable Long id, @RequestBody Review review) {
         courseService.addReview(id, review);
@@ -69,6 +70,7 @@ public class CourseController {
         return courseService.getReviewsForCourse(id);
     }
 
+    // ── Instructor ────────────────────────────────────────────────────────────
     @GetMapping("/instructor/{instructorId}")
     public List<Course> getCoursesByInstructorId(@PathVariable Long instructorId) {
         return courseService.getCoursesByInstructorId(instructorId);
@@ -84,13 +86,55 @@ public class CourseController {
         return ResponseEntity.ok(courseService.updateCourseStatus(id, status));
     }
 
+    // ── Section CRUD ──────────────────────────────────────────────────────────
     @PostMapping("/{id}/sections")
     public ResponseEntity<Section> addSection(@PathVariable Long id, @RequestBody Section section) {
         return new ResponseEntity<>(courseService.addSection(id, section), HttpStatus.CREATED);
     }
 
-    @PostMapping("/sections/{sectionId}/lessons")
-    public ResponseEntity<Lesson> addLesson(@PathVariable Long sectionId, @RequestBody Lesson lesson) {
+    // P2 FIX: Delete section
+    @DeleteMapping("/{courseId}/sections/{sectionId}")
+    public ResponseEntity<Void> deleteSection(
+            @PathVariable Long courseId,
+            @PathVariable Long sectionId) {
+        courseService.deleteSection(courseId, sectionId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ── Lesson CRUD ───────────────────────────────────────────────────────────
+
+    // P2 FIX: Add lesson via courseId/sectionId (matches frontend URL)
+    @PostMapping("/{courseId}/sections/{sectionId}/lessons")
+    public ResponseEntity<Lesson> addLessonByCourse(
+            @PathVariable Long courseId,
+            @PathVariable Long sectionId,
+            @RequestBody Lesson lesson) {
         return new ResponseEntity<>(courseService.addLesson(sectionId, lesson), HttpStatus.CREATED);
+    }
+
+    // Legacy: add lesson by sectionId only
+    @PostMapping("/sections/{sectionId}/lessons")
+    public ResponseEntity<Lesson> addLesson(
+            @PathVariable Long sectionId,
+            @RequestBody Lesson lesson) {
+        return new ResponseEntity<>(courseService.addLesson(sectionId, lesson), HttpStatus.CREATED);
+    }
+
+    // P2 FIX: Update lesson
+    @PutMapping("/{courseId}/lessons/{lessonId}")
+    public ResponseEntity<Lesson> updateLesson(
+            @PathVariable Long courseId,
+            @PathVariable Long lessonId,
+            @RequestBody Lesson lesson) {
+        return ResponseEntity.ok(courseService.updateLesson(courseId, lessonId, lesson));
+    }
+
+    // P2 FIX: Delete lesson
+    @DeleteMapping("/{courseId}/lessons/{lessonId}")
+    public ResponseEntity<Void> deleteLesson(
+            @PathVariable Long courseId,
+            @PathVariable Long lessonId) {
+        courseService.deleteLesson(courseId, lessonId);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
     List<Enrollment> findByStudentId(Long studentId);
     Optional<Enrollment> findByStudentIdAndCourseId(Long studentId, Long courseId);
+    List<Enrollment> findByCourseId(Long courseId);
+    void deleteByStudentIdAndCourseId(Long studentId, Long courseId);
 }
