@@ -8,7 +8,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in
     const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
 
@@ -53,9 +52,32 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     delete axios.defaults.headers.common['Authorization'];
+    window.location.href = '/login';
   };
 
-  if (loading) return <div className="h-screen w-screen flex items-center justify-center text-primary">Loading...</div>;
+  // Auto-logout on 401 (expired token)
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      res => res,
+      err => {
+        if (err.response?.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+        }
+        return Promise.reject(err);
+      }
+    );
+    return () => axios.interceptors.response.eject(interceptor);
+  }, []);
+
+  if (loading) return (
+    <div className="h-screen w-screen flex flex-col items-center justify-center bg-white gap-5">
+      <div className="w-16 h-16 bg-gradient-to-tr from-primary to-purple-400 rounded-2xl flex items-center justify-center text-white font-extrabold text-xl shadow-soft-purple">SS</div>
+      <div className="w-8 h-8 border-[3px] border-primary border-t-transparent rounded-full animate-spin" />
+      <p className="text-secondary text-sm font-semibold">Loading SkillStore...</p>
+    </div>
+  );
 
   return (
     <AuthContext.Provider value={{ user, login, logout, register }}>

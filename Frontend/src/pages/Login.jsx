@@ -15,9 +15,13 @@ const Login = () => {
     setError('');
     const success = await login(username, password);
     if (success) {
-      navigate('/dashboard');
+      // Role-based redirect
+      const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+      if (storedUser.role === 'INSTRUCTOR') navigate('/instructor/dashboard');
+      else if (storedUser.role === 'ADMIN') navigate('/admin/dashboard');
+      else navigate('/dashboard');
     } else {
-      setError('Invalid email or password');
+      setError('Invalid username or password. Please try again.');
     }
   };
 
@@ -25,10 +29,10 @@ const Login = () => {
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
       <div className="bg-white p-10 md:p-12 w-full max-w-[440px] rounded-[2rem] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.05)] border border-gray-50/50">
         <div className="text-center mb-8">
-          <div className="bg-primary text-white w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-bold mx-auto mb-4 shadow-soft-purple">
-            school
+          <div className="bg-gradient-to-tr from-primary to-purple-400 text-white w-14 h-14 rounded-2xl flex items-center justify-center text-base font-extrabold mx-auto mb-4 shadow-soft-purple">
+            SS
           </div>
-          <h1 className="text-[28px] font-bold text-primary mb-2">LuminaLearn</h1>
+          <h1 className="text-[28px] font-extrabold text-primary mb-2">SkillStore</h1>
           <p className="text-secondary text-sm font-medium">Welcome back to your learning journey</p>
         </div>
 
