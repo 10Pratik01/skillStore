@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const CATEGORIES = ['All', 'Development', 'Design', 'Business', 'Marketing', 'Data Science', 'Photography', 'Music'];
+const LEVELS = ['All', 'Beginner', 'Intermediate', 'Advanced'];
+const LANGUAGES = ['All', 'English'];
 
 const StarRating = ({ rating, interactive = false, onRate }) => {
     const [hovered, setHovered] = useState(0);
@@ -31,9 +34,15 @@ const Courses = () => {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
+    const [selectedLevel, setSelectedLevel] = useState('All');
+    const [selectedLanguage, setSelectedLanguage] = useState('All');
+    const [maxPrice, setMaxPrice] = useState('');
+    const [minRating, setMinRating] = useState('');
     const { user } = useAuth();
+    const navigate = useNavigate();
 
     const [checkoutCourse, setCheckoutCourse] = useState(null);
+    const [selectedCourse, setSelectedCourse] = useState(null);
     const [couponCode, setCouponCode] = useState('');
     const [validatingCoupon, setValidatingCoupon] = useState(false);
     const [discountResponse, setDiscountResponse] = useState(null);
@@ -49,8 +58,12 @@ const Courses = () => {
             const params = {};
             if (searchQuery) params.q = searchQuery;
             if (selectedCategory !== 'All') params.category = selectedCategory;
+            if (selectedLevel !== 'All') params.level = selectedLevel;
+            if (selectedLanguage !== 'All') params.language = selectedLanguage;
+            if (maxPrice !== '') params.maxPrice = Number(maxPrice);
+            if (minRating !== '') params.minRating = Number(minRating);
 
-            const hasFilters = searchQuery || selectedCategory !== 'All';
+            const hasFilters = searchQuery || selectedCategory !== 'All' || selectedLevel !== 'All' || selectedLanguage !== 'All' || maxPrice !== '' || minRating !== '';
             const url = hasFilters ? '/api/courses/search' : '/api/courses';
             const response = await axios.get(url, { params });
             setCourses(response.data);
@@ -59,7 +72,7 @@ const Courses = () => {
         } finally {
             setLoading(false);
         }
-    }, [searchQuery, selectedCategory]);
+    }, [searchQuery, selectedCategory, selectedLevel, selectedLanguage, maxPrice, minRating]);
 
     // Debounced search: trigger fetch 400ms after user stops typing
     useEffect(() => {
@@ -154,6 +167,51 @@ const Courses = () => {
                         </button>
                     ))}
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <select value={selectedLevel} onChange={(e) => setSelectedLevel(e.target.value)} className="bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-white focus:outline-none focus:border-primary transition-colors">
+                        {LEVELS.map(level => <option key={level} value={level}>{level === 'All' ? 'All levels' : level}</option>)}
+                    </select>
+                    <select value={selectedLanguage} onChange={(e) => setSelectedLanguage(e.target.value)} className="bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-white focus:outline-none focus:border-primary transition-colors">
+                        {LANGUAGES.map(language => <option key={language} value={language}>{language === 'All' ? 'All languages' : language}</option>)}
+                    </select>
+                    <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={maxPrice}
+                        onChange={(e) => setMaxPrice(e.target.value)}
+                        placeholder="Max price"
+                        className="bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-white placeholder-secondary focus:outline-none focus:border-primary transition-colors"
+                    />
+                    <input
+                        type="number"
+                        min="0"
+                        max="5"
+                        step="0.5"
+                        value={minRating}
+                        onChange={(e) => setMinRating(e.target.value)}
+                        placeholder="Min rating"
+                        className="bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-white placeholder-secondary focus:outline-none focus:border-primary transition-colors"
+                    />
+                </div>
+
+                <div className="flex items-center justify-between">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setSearchQuery('');
+                            setSelectedCategory('All');
+                            setSelectedLevel('All');
+                            setSelectedLanguage('All');
+                            setMaxPrice('');
+                            setMinRating('');
+                        }}
+                        className="text-sm text-secondary hover:text-white transition-colors"
+                    >
+                        Clear filters
+                    </button>
+                </div>
             </div>
 
             {/* Course Grid */}
@@ -165,7 +223,19 @@ const Courses = () => {
                         <div className="col-span-full text-center text-secondary py-12">No courses found matching your search.</div>
                     ) : (
                         courses.map(course => (
-                            <div key={course.id} className="glass flex flex-col transition-transform hover:-translate-y-1 hover:shadow-primary/20 hover:shadow-2xl overflow-hidden">
+                            <div
+                                key={course.id}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => setSelectedCourse(course)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        setSelectedCourse(course);
+                                    }
+                                }}
+                                className="glass flex flex-col transition-transform hover:-translate-y-1 hover:shadow-primary/20 hover:shadow-2xl overflow-hidden cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            >
                                 <div className="p-6 flex-1 flex flex-col">
                                     <span className="text-xs font-bold uppercase tracking-wider text-primary mb-2 bg-primary/10 px-2 py-1 rounded self-start">
                                         {course.category || 'General'}
@@ -187,13 +257,13 @@ const Courses = () => {
                                             {user?.role === 'STUDENT' && (
                                                 <>
                                                     <button
-                                                        onClick={() => setReviewCourse(course)}
+                                                        onClick={(e) => { e.stopPropagation(); setReviewCourse(course); }}
                                                         className="text-yellow-400 hover:text-yellow-300 transition-colors p-2 rounded-lg hover:bg-yellow-400/10"
                                                         title="Leave a Review"
                                                     >
                                                         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
                                                     </button>
-                                                    <button onClick={() => setCheckoutCourse(course)} className="btn-primary py-2 px-4 text-sm">
+                                                    <button onClick={(e) => { e.stopPropagation(); setCheckoutCourse(course); }} className="btn-primary py-2 px-4 text-sm">
                                                         Enroll
                                                     </button>
                                                 </>
@@ -236,6 +306,44 @@ const Courses = () => {
                         </div>
                         <button onClick={confirmEnrollment} className="btn-primary w-full py-4 text-lg animate-pulse hover:animate-none">Pay Mock ${finalPrice.toFixed(2)}</button>
                         <p className="text-center text-xs text-secondary mt-4 opacity-50">Powered by Stripe Simulation API</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Course Details Modal */}
+            {selectedCourse && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm slide-up">
+                    <div className="glass max-w-2xl w-full p-8 relative border border-white/10 shadow-2xl shadow-black/40">
+                        <button onClick={() => setSelectedCourse(null)} className="absolute top-4 right-4 text-secondary hover:text-white text-xl">&times;</button>
+                        <div className="flex flex-wrap items-center gap-3 mb-4">
+                            <span className="text-xs font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-1 rounded">{selectedCourse.category || 'General'}</span>
+                            <span className="text-xs font-bold uppercase tracking-wider text-white/70 bg-white/10 px-2 py-1 rounded">{selectedCourse.level || 'All levels'}</span>
+                            <span className="text-xs font-bold uppercase tracking-wider text-white/70 bg-white/10 px-2 py-1 rounded">{selectedCourse.language || 'English'}</span>
+                        </div>
+                        <h3 className="text-3xl font-bold text-white mb-3">{selectedCourse.title}</h3>
+                        <p className="text-secondary mb-6 leading-relaxed">{selectedCourse.description}</p>
+                        <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
+                            <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                                <div className="text-secondary mb-1">Price</div>
+                                <div className="text-white text-xl font-bold">${selectedCourse.price}</div>
+                            </div>
+                            <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                                <div className="text-secondary mb-1">Rating</div>
+                                <div className="text-white text-xl font-bold">{selectedCourse.averageRating ? selectedCourse.averageRating.toFixed(1) : 'New'} ★</div>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap gap-3 justify-end">
+                            <button onClick={() => setSelectedCourse(null)} className="btn-secondary px-5 py-3">Close</button>
+                            {user?.role === 'STUDENT' ? (
+                                <button onClick={() => { setCheckoutCourse(selectedCourse); setSelectedCourse(null); }} className="btn-primary px-5 py-3">
+                                    Enroll now
+                                </button>
+                            ) : (
+                                <button onClick={() => { setSelectedCourse(null); navigate('/login'); }} className="btn-primary px-5 py-3 opacity-80">
+                                    Sign in to enroll
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

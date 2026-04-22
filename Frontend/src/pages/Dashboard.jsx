@@ -55,7 +55,7 @@ const CourseQA = ({ courseId, userId, userName }) => {
         fetchHistory();
 
         const stompClient = new Client({
-            webSocketFactory: () => new WebSocket('ws://localhost:8087/ws/community/websocket'),
+            webSocketFactory: () => new WebSocket(`${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws/community/websocket`),
             reconnectDelay: 5000,
             onConnect: () => {
                 stompClient.subscribe(`/topic/course/${courseId}`, (message) => {
@@ -794,7 +794,7 @@ const NotificationBell = ({ userId }) => {
 
         // Connect STOMP
         const stompClient = new Client({
-            webSocketFactory: () => new WebSocket('ws://localhost:8087/ws/community/websocket'), // Direct to community-service
+            webSocketFactory: () => new WebSocket(`${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws/community/websocket`),
             reconnectDelay: 5000,
             onConnect: () => {
                 stompClient.subscribe(`/topic/notifications/${userId}`, (message) => {

@@ -1,0 +1,166 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: skillstore-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./Backend/db/init-multiple-dbs.sql:/docker-entrypoint-initdb.d/init-multiple-dbs.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  registry:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+      args:
+        MODULE: registry
+    container_name: skillstore-registry
+    restart: unless-stopped
+    ports:
+      - "8761:8761"
+
+  user-service:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+      args:
+        MODULE: user-service
+    container_name: skillstore-user-service
+    restart: unless-stopped
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://registry:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/miniproject_user
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+      registry:
+        condition: service_started
+
+  course-service:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+      args:
+        MODULE: course-service
+    container_name: skillstore-course-service
+    restart: unless-stopped
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://registry:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/miniproject_course
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+      registry:
+        condition: service_started
+
+  order-service:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+      args:
+        MODULE: order-service
+    container_name: skillstore-order-service
+    restart: unless-stopped
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://registry:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/miniproject_order
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+      registry:
+        condition: service_started
+
+  assignment-service:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+      args:
+        MODULE: assignment-service
+    container_name: skillstore-assignment-service
+    restart: unless-stopped
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://registry:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/miniproject_assignment
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+      registry:
+        condition: service_started
+
+  community-service:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+      args:
+        MODULE: community-service
+    container_name: skillstore-community-service
+    restart: unless-stopped
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://registry:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/miniproject_community
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+      registry:
+        condition: service_started
+
+  gateway:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+      args:
+        MODULE: gateway
+    container_name: skillstore-gateway
+    restart: unless-stopped
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://registry:8761/eureka/
+    depends_on:
+      registry:
+        condition: service_started
+      user-service:
+        condition: service_started
+      course-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      assignment-service:
+        condition: service_started
+      community-service:
+        condition: service_started
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    container_name: skillstore-frontend
+    restart: unless-stopped
+    depends_on:
+      gateway:
+        condition: service_started
+    ports:
+      - "3000:80"
+
+volumes:
+  postgres_data:

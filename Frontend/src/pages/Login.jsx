@@ -55,6 +55,12 @@ const Login = () => {
             Sign In
           </button>
         </form>
+        <div className="mt-6 p-4 rounded-lg border border-white/10 bg-white/5 text-xs text-secondary space-y-1">
+          <p className="font-semibold text-white">Seeded demo accounts</p>
+          <p>student1 / password123</p>
+          <p>instructor1 / password123</p>
+          <p>admin1 / password123</p>
+        </div>
         <p className="mt-6 text-center text-secondary text-sm">
           Don't have an account? <Link to="/register" className="text-primary hover:underline">Register here</Link>
         </p>

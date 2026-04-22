@@ -50,8 +50,12 @@ public class CourseController {
     @GetMapping("/search")
     public List<Course> searchCourses(
             @RequestParam(required = false) String q,
-            @RequestParam(required = false) String category) {
-        return courseService.searchAndFilter(q, category);
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String level,
+            @RequestParam(required = false) String language,
+            @RequestParam(required = false) Double maxPrice,
+            @RequestParam(required = false) Double minRating) {
+        return courseService.searchAndFilter(q, category, level, language, maxPrice, minRating);
     }
 
     @PostMapping("/{id}/reviews")

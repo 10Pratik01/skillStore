@@ -30,7 +30,9 @@ public class CourseService {
     private com.miniproject.course_service.repository.LessonRepository lessonRepository;
 
     public List<Course> getAllCourses() {
-        return courseRepository.findAll();
+        return courseRepository.findAll().stream()
+                .filter(course -> course.getStatus() == null || !"ARCHIVED".equalsIgnoreCase(course.getStatus()))
+                .toList();
     }
 
     public Course getCourseById(Long id) {
@@ -87,18 +89,32 @@ public class CourseService {
         return reviewRepository.findByCourseId(courseId);
     }
 
-    public List<Course> searchAndFilter(String query, String category) {
-        if (query != null && !query.isBlank() && category != null && !category.isBlank()) {
-            // Both filters: search by title AND match category
-            return courseRepository.findByTitleContaining(query).stream()
-                    .filter(c -> category.equalsIgnoreCase(c.getCategory()))
-                    .toList();
-        } else if (query != null && !query.isBlank()) {
-            return courseRepository.findByTitleContaining(query);
-        } else if (category != null && !category.isBlank()) {
-            return courseRepository.findByCategory(category);
-        }
-        return courseRepository.findAll();
+    public List<Course> searchAndFilter(String query,
+                                        String category,
+                                        String level,
+                                        String language,
+                                        Double maxPrice,
+                                        Double minRating) {
+        return courseRepository.findAll().stream()
+                .filter(course -> course.getStatus() == null || !"ARCHIVED".equalsIgnoreCase(course.getStatus()))
+                .filter(course -> isBlank(query)
+                        || containsIgnoreCase(course.getTitle(), query)
+                        || containsIgnoreCase(course.getDescription(), query)
+                        || containsIgnoreCase(course.getCategory(), query))
+                .filter(course -> isBlank(category) || category.equalsIgnoreCase(course.getCategory()))
+                .filter(course -> isBlank(level) || level.equalsIgnoreCase(course.getLevel()))
+                .filter(course -> isBlank(language) || language.equalsIgnoreCase(course.getLanguage()))
+                .filter(course -> maxPrice == null || (course.getPrice() != null && course.getPrice() <= maxPrice))
+                .filter(course -> minRating == null || (course.getAverageRating() != null && course.getAverageRating() >= minRating))
+                .toList();
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private boolean containsIgnoreCase(String source, String query) {
+        return source != null && source.toLowerCase().contains(query.toLowerCase());
     }
 
     public List<Map<String, Object>> getInstructorAnalytics(Long instructorId) {
