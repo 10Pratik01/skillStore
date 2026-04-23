@@ -10,7 +10,7 @@ SkillStore is a state-of-the-art, comprehensive e-learning platform built on a r
 
 ### 👨‍🎓 For Students
 - **Course Discovery**: Browse and search through a wide range of courses across various categories.
-- **Interactive Learning**: Engage with video lessons, assignments, and quizzes.
+- **Interactive Learning**: Engage with video lessons, assignments, and cheat-proof, server-side-graded quizzes.
 - **Progress Tracking**: Keep track of completed lessons and overall course progress.
 - **Community Q&A**: Ask questions and get answers from instructors and peers.
 - **Secure Enrollment**: Purchase courses with a streamlined checkout process.
@@ -18,14 +18,16 @@ SkillStore is a state-of-the-art, comprehensive e-learning platform built on a r
 ### 👨‍🏫 For Instructors
 - **Course Creation**: Intuitive studio for building and managing course content.
 - **Analytics Dashboard**: Gain insights into student performance and course engagement.
-- **Engagement Tools**: Create quizzes and assignments to evaluate student learning.
+- **AI-Powered Tools**: Generate quizzes instantly from lesson context using Google Gemini AI.
 - **Feedback Management**: Interact with students through community forums.
 
 ---
 
 ## 🏗️ Architecture
 
-SkillStore follows a **Microservices Architecture** to ensure scalability, maintainability, and independent deployment of features.
+SkillStore follows a **Microservices Architecture** to ensure scalability, maintainability, and independent deployment of features. 
+
+> **👉 For a deep dive into how data flows, authentication works, and services communicate, please read [UNDERSTANDING.md](UNDERSTANDING.md).**
 
 - **Frontend**: A modern, responsive React application built with Vite and styled with Tailwind CSS.
 - **Backend**: Java-based microservices using Spring Boot and Spring Cloud.
@@ -43,6 +45,7 @@ SkillStore follows a **Microservices Architecture** to ensure scalability, maint
 | **Frontend** | React, Vite, Tailwind CSS, Axios, Lucide Icons |
 | **Backend** | Spring Boot, Spring Data JPA, Hibernate |
 | **Microservices** | Spring Cloud Eureka, Spring Cloud Gateway |
+| **AI Integration** | Google Gemini 2.0 Flash API |
 | **Database** | PostgreSQL |
 | **DevOps** | Docker, Docker Compose |
 
@@ -56,12 +59,13 @@ SkillStore follows a **Microservices Architecture** to ensure scalability, maint
 │   ├── user-service/        # Authentication & User Management
 │   ├── course-service/      # Course Content & Catalog
 │   ├── order-service/       # Enrollment & Payments
-│   ├── assignment-service/  # Quizzes & Assignments
-│   ├── community-service/   # Q&A & Discussions
+│   ├── assignment-service/  # Quizzes (AI generated), Assignments, Submissions
+│   ├── community-service/   # Q&A, Discussions, System Notifications
 │   ├── gateway/             # API Gateway (Port 8080)
 │   └── registry/            # Eureka Service Registry (Port 8761)
 ├── Frontend/                # React Dashboard & Learning App (Port 3000)
-└── docker-compose.yml       # Full Stack Orchestration
+├── docker-compose.yml       # Full Stack Orchestration
+└── UNDERSTANDING.md         # Architecture & Workflow documentation
 ```
 
 ---
