@@ -30,7 +30,7 @@ const Register = () => {
           <div className="bg-primary text-white w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-bold mx-auto mb-4 shadow-soft-purple">
             school
           </div>
-          <h1 className="text-[28px] font-bold text-primary mb-2">LuminaLearn</h1>
+          <h1 className="text-[28px] font-bold text-primary mb-2">SkillStore</h1>
           <p className="text-secondary text-sm font-medium">Join our community of learners</p>
         </div>
 

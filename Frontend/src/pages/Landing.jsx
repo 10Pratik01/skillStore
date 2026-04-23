@@ -23,7 +23,7 @@ const HOW_STEPS_INSTRUCTOR = [
 ];
 
 const TESTIMONIALS = [
-  { name: 'Priya Sharma', role: 'Frontend Developer', text: 'LuminaLearn transformed my career. The course quality is outstanding and the community support is incredible.', avatar: 'P' },
+  { name: 'Priya Sharma', role: 'Frontend Developer', text: 'SkillStore transformed my career. The course quality is outstanding and the community support is incredible.', avatar: 'P' },
   { name: 'Arjun Mehta', role: 'Data Scientist', text: 'The instructor tools are best-in-class. I was able to build and publish my first course in a weekend.', avatar: 'A' },
   { name: 'Sofia Chen', role: 'UX Designer', text: 'Real-time Q&A during lessons is a game-changer. I always get answers exactly when I need them.', avatar: 'S' },
 ];
@@ -260,7 +260,7 @@ const Landing = () => {
           <div className="absolute bottom-0 left-0 w-60 h-60 bg-white/5 rounded-full blur-2xl -ml-20 -mb-20" />
           <div className="relative z-10">
             <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-4">Ready to start learning?</h2>
-            <p className="text-white/80 text-lg mb-10">Join thousands of students already on LuminaLearn today.</p>
+            <p className="text-white/80 text-lg mb-10">Join thousands of students already on SkillStore today.</p>
             <div className="flex flex-wrap gap-4 justify-center">
               <button onClick={() => navigate('/register')} className="bg-white text-primary font-extrabold px-8 py-4 rounded-2xl shadow-soft hover:bg-gray-50 transition-colors hover:scale-105">
                 Create Free Account
@@ -280,7 +280,7 @@ const Landing = () => {
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center text-white text-xs font-bold shadow-soft-purple">LL</div>
-                <span className="text-lg font-extrabold text-primary">LuminaLearn</span>
+                <span className="text-lg font-extrabold text-primary">SkillStore</span>
               </div>
               <p className="text-secondary text-sm leading-relaxed">The modern platform for expert-led learning experiences.</p>
             </div>
@@ -310,7 +310,7 @@ const Landing = () => {
             </div>
           </div>
           <div className="border-t border-gray-100 pt-8 text-center text-sm text-secondary">
-            © {new Date().getFullYear()} LuminaLearn. All rights reserved.
+            © {new Date().getFullYear()} SkillStore. All rights reserved.
           </div>
         </div>
       </footer>

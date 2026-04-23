@@ -17,7 +17,7 @@ const InstructorSidebar = () => {
     <div className="w-64 bg-surface h-screen fixed left-0 top-0 border-r border-gray-100 flex flex-col pt-6 pb-8">
       {/* Brand */}
       <div className="px-8 mb-10">
-        <h1 className="text-xl font-bold text-primary tracking-wide mb-1">LuminaLearn</h1>
+        <h1 className="text-xl font-bold text-primary tracking-wide mb-1">SkillStore</h1>
         <div className="flex items-center gap-3 mt-4">
           <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center text-teal-600">
             <UserCircle2 size={24} />

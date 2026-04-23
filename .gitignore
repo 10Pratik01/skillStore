@@ -45,3 +45,4 @@ Frontend/.env.production.local
 Frontend/graphify-out 
 graphify-out
 Implementation.md
+.env
