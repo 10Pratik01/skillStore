@@ -1,5 +1,7 @@
 package com.miniproject.course_service.service;
 
+import com.miniproject.course_service.client.EnrollmentClient;
+import com.miniproject.course_service.client.NotificationClient;
 import com.miniproject.course_service.entity.Course;
 import com.miniproject.course_service.entity.Lesson;
 import com.miniproject.course_service.entity.Review;
@@ -9,8 +11,10 @@ import com.miniproject.course_service.repository.LessonRepository;
 import com.miniproject.course_service.repository.ReviewRepository;
 import com.miniproject.course_service.repository.SectionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -23,6 +27,8 @@ public class CourseService {
     @Autowired private ReviewRepository reviewRepository;
     @Autowired private SectionRepository sectionRepository;
     @Autowired private LessonRepository lessonRepository;
+    @Autowired private NotificationClient notificationClient;
+    @Autowired private EnrollmentClient enrollmentClient;
 
     // ── Course CRUD ───────────────────────────────────────────────────────────
     public List<Course> getAllCourses() {
@@ -154,7 +160,51 @@ public class CourseService {
         if (lesson.getOrderNum() == null) {
             lesson.setOrderNum(section.getLessons() == null ? 1 : section.getLessons().size() + 1);
         }
-        return lessonRepository.save(lesson);
+        Lesson saved = lessonRepository.save(lesson);
+
+        // ── Notify all enrolled students about the new task ──────────────
+        Long courseId = section.getCourse().getId();
+        String courseTitle = section.getCourse().getTitle();
+        String taskType = lesson.getType() != null ? lesson.getType() : "task";
+        String msg = "New " + taskType + " added in \"" + courseTitle + "\": " + lesson.getTitle();
+        List<Long> studentIds = enrollmentClient.getEnrolledStudentIds(courseId);
+        for (Long studentId : studentIds) {
+            notificationClient.send(studentId, "NEW_TASK", msg);
+        }
+        return saved;
+    }
+
+    // ── Due-date notification scheduler ─────────────────────────────────────
+    // Runs every day at 8:00 AM UTC
+    @Scheduled(cron = "0 0 8 * * *")
+    public void checkDueDates() {
+        List<Lesson> all = lessonRepository.findAll();
+        LocalDate today = LocalDate.now();
+        LocalDate tomorrow = today.plusDays(1);
+
+        for (Lesson lesson : all) {
+            if (lesson.getDueDate() == null || lesson.getType() == null) continue;
+            if (!"assignment".equalsIgnoreCase(lesson.getType())) continue;
+
+            try {
+                LocalDate due = LocalDate.parse(lesson.getDueDate());
+                Long courseId = lesson.getSection().getCourse().getId();
+                String courseTitle = lesson.getSection().getCourse().getTitle();
+                List<Long> students = enrollmentClient.getEnrolledStudentIds(courseId);
+
+                if (due.equals(tomorrow)) {
+                    // Due tomorrow → DUE_SOON
+                    String msg = "⏰ Due tomorrow: \"" + lesson.getTitle() + "\" in " + courseTitle;
+                    for (Long sid : students) notificationClient.send(sid, "MENTION", msg);
+                } else if (due.equals(today) || due.isBefore(today)) {
+                    // Due today or overdue → DUE_PASSED
+                    String msg = "🔴 Overdue: \"" + lesson.getTitle() + "\" was due " + due + " in " + courseTitle;
+                    for (Long sid : students) notificationClient.send(sid, "MENTION", msg);
+                }
+            } catch (Exception e) {
+                // Skip malformed dates silently
+            }
+        }
     }
 
     // P2 FIX: Update lesson by ID

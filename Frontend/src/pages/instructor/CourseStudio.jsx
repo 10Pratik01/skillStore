@@ -16,19 +16,23 @@ const CourseStudio = () => {
   const { user } = useAuth();
 
   const [course, setCourse] = useState(null);
-  const [selected, setSelected] = useState(null); // { type:'lesson'|'section', data }
+  const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [inviteUsername, setInviteUsername] = useState('');
   const [inviting, setInviting] = useState(false);
   const [enrolledStudents, setEnrolledStudents] = useState([]);
-  const [activeSettingsTab, setActiveSettingsTab] = useState('content'); // 'content'|'access'|'students'
+  const [activeSettingsTab, setActiveSettingsTab] = useState('content');
   const [editLesson, setEditLesson] = useState({ title: '', type: 'video', content: '', videoUrl: '', instructions: '', dueDate: '', maxScore: '' });
+  const [editCourse, setEditCourse] = useState({ title: '', subtitle: '', description: '' });
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState(false);
 
   const fetchCourse = async () => {
     try {
       const res = await axios.get(`/api/courses/${courseId}`);
       setCourse(res.data);
+      setEditCourse({ title: res.data.title || '', subtitle: res.data.subtitle || '', description: res.data.description || '' });
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
@@ -92,13 +96,40 @@ const CourseStudio = () => {
     if (!inviteUsername.trim()) return;
     setInviting(true);
     try {
-      await axios.post('/api/orders/instructor-enroll', { courseId: parseInt(courseId), studentUsername: inviteUsername.trim() });
+      // Try to resolve username → id first
+      let studentId;
+      try {
+        const uRes = await axios.get(`/api/users/username/${inviteUsername.trim()}`);
+        studentId = uRes.data?.id;
+      } catch {}
+      if (studentId) {
+        await axios.post('/api/orders/instructor-enroll', { courseId: parseInt(courseId), studentId });
+      } else {
+        await axios.post('/api/orders/instructor-enroll', { courseId: parseInt(courseId), studentUsername: inviteUsername.trim() });
+      }
       setInviteUsername('');
       fetchStudents();
       alert(`Successfully invited ${inviteUsername}!`);
     } catch (e) {
-      alert(e.response?.data?.message || 'Could not invite student. Check the username/email.');
+      alert(e.response?.data?.message || 'Could not invite student.');
     } finally { setInviting(false); }
+  };
+
+  const handleUpdateStatus = async (newStatus) => {
+    setStatusUpdating(true);
+    try {
+      await axios.patch(`/api/courses/${courseId}/status?status=${newStatus}`);
+      await fetchCourse();
+    } catch (e) { alert('Status update failed'); }
+    finally { setStatusUpdating(false); }
+  };
+
+  const handleSaveCourseInfo = async () => {
+    try {
+      await axios.put(`/api/courses/${courseId}`, editCourse);
+      fetchCourse();
+      alert('Course info saved!');
+    } catch (e) { alert('Save failed'); }
   };
 
   const handleRemoveStudent = async (studentId) => {
@@ -129,7 +160,38 @@ const CourseStudio = () => {
           </button>
           <h2 className="font-extrabold text-textMain text-lg line-clamp-2">{course?.title || 'Untitled Course'}</h2>
           <p className="text-xs text-secondary mt-1">{(course?.sections || []).length} sections · {totalLessons} lessons</p>
+
+          {/* Status + Publish toggle */}
+          <div className="flex items-center justify-between mt-3">
+            <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase ${
+              course?.status === 'PUBLISHED'  ? 'bg-green-100 text-green-700'  :
+              course?.status === 'COMPLETED'  ? 'bg-blue-100 text-blue-700'   :
+              'bg-amber-100 text-amber-700'
+            }`}>
+              {course?.status || 'DRAFT'}
+            </span>
+            {course?.status !== 'COMPLETED' && (
+              <button
+                onClick={() => handleUpdateStatus(course?.status === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED')}
+                disabled={statusUpdating}
+                className={`text-xs font-extrabold px-3 py-1.5 rounded-lg transition-all disabled:opacity-50 ${
+                  course?.status === 'PUBLISHED'
+                    ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                    : 'bg-green-100 text-green-700 hover:bg-green-200'
+                }`}
+              >
+                {statusUpdating ? '…' : course?.status === 'PUBLISHED' ? '↩ Unpublish' : '🚀 Publish'}
+              </button>
+            )}
+            {course?.status === 'COMPLETED' && (
+              <button onClick={() => handleUpdateStatus('PUBLISHED')} disabled={statusUpdating}
+                className="text-xs font-extrabold px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-all disabled:opacity-50">
+                {statusUpdating ? '…' : '↺ Reopen'}
+              </button>
+            )}
+          </div>
         </div>
+
 
         {/* Sections */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -339,6 +401,42 @@ const CourseStudio = () => {
           )}
         </div>
       </div>
+
+      {/* ── Mark Complete FAB ─────────────────────── */}
+      {course?.status !== 'COMPLETED' && (
+        <button
+          onClick={() => setShowCompleteConfirm(true)}
+          className="fixed bottom-8 right-8 flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-extrabold px-5 py-3.5 rounded-2xl shadow-lg hover:shadow-xl transition-all z-50 text-sm"
+        >
+          ✅ Mark Course Complete
+        </button>
+      )}
+
+      {/* ── Confirm Complete Dialog ───────────────── */}
+      {showCompleteConfirm && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-xl">
+            <div className="text-5xl mb-4 text-center">🏁</div>
+            <h3 className="text-xl font-extrabold text-textMain text-center mb-2">Mark Course Complete?</h3>
+            <p className="text-secondary text-sm text-center mb-6 leading-relaxed">
+              This marks the course as <strong>Completed</strong> for all enrolled students.
+              You can reopen it anytime.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowCompleteConfirm(false)} className="flex-1 btn-secondary py-3">
+                Cancel
+              </button>
+              <button
+                onClick={async () => { setShowCompleteConfirm(false); await handleUpdateStatus('COMPLETED'); }}
+                disabled={statusUpdating}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-extrabold py-3 rounded-2xl transition-all disabled:opacity-50"
+              >
+                Yes, Complete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

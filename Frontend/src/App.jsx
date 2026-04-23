@@ -13,6 +13,7 @@ import InstructorDashboard from './pages/instructor/InstructorDashboard';
 import CourseBuilder from './pages/instructor/CourseBuilder';
 import CourseStudio from './pages/instructor/CourseStudio';
 import GradingQueue from './pages/instructor/GradingQueue';
+import CourseWarnings from './pages/instructor/CourseWarnings';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminCourses from './pages/admin/AdminCourses';
@@ -108,6 +109,7 @@ const AppContent = () => {
             <Route path="/instructor/courses/:courseId" element={<CourseStudio />} />
             <Route path="/instructor/courses/:courseId/grading" element={<GradingQueue />} />
             <Route path="/instructor/grading" element={<GradingQueue />} />
+            <Route path="/instructor/warnings" element={<CourseWarnings />} />
 
             {/* Admin Routes */}
             <Route path="/admin/dashboard" element={<AdminDashboard />} />

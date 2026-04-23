@@ -23,7 +23,8 @@ public class Submission {
     @Column(columnDefinition = "TEXT")
     private String textContent;
 
-    private String fileUrl; // for file-upload assignments
+    @Column(columnDefinition = "TEXT")
+    private String fileUrl; // base64 data URL for file-upload assignments
 
     private String status = "SUBMITTED"; // SUBMITTED, GRADED, LATE
 

@@ -2,10 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, BarChart, Bar, Cell
+} from 'recharts';
 
-const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const genRevenue = () => MONTH_LABELS.slice(0, new Date().getMonth() + 1).map(m => ({ month: m, revenue: Math.floor(Math.random() * 3000) + 500 }));
+const MONTH_LABELS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// Build monthly revenue by spreading enrollment revenue evenly across past months
+const buildRevenueData = (courses) => {
+  const currentMonth = new Date().getMonth();
+  const months = MONTH_LABELS.slice(0, currentMonth + 1);
+  const totalRevenue = courses.reduce((s, c) => s + (c.enrollmentCount || 0) * (c.price || 0), 0);
+  // Distribute across months with slight growth curve
+  return months.map((month, i) => ({
+    month,
+    revenue: Math.round(totalRevenue * (0.4 + (i / months.length) * 0.6) / months.length),
+  }));
+};
 
 const StatCard = ({ icon, label, value, color = 'bg-primary/10 text-primary' }) => (
   <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-soft">
@@ -21,7 +35,6 @@ const InstructorDashboard = () => {
   const [courses, setCourses] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [revenueData] = useState(genRevenue());
 
   useEffect(() => {
     if (!user?.id) return;
@@ -39,9 +52,11 @@ const InstructorDashboard = () => {
     fetch();
   }, [user]);
 
-  const totalStudents = analytics?.totalStudents || courses.reduce((a, c) => a + (c.enrollmentCount || 0), 0);
-  const totalRevenue = analytics?.totalRevenue || courses.reduce((a, c) => a + ((c.enrollmentCount || 0) * (c.price || 0)), 0);
-  const avgRating = analytics?.avgRating || (courses.filter(c => c.averageRating).reduce((a, c, _, arr) => a + c.averageRating / arr.length, 0));
+  const totalStudents = courses.reduce((a, c) => a + (c.enrollmentCount || 0), 0);
+  const totalRevenue  = courses.reduce((a, c) => a + ((c.enrollmentCount || 0) * (c.price || 0)), 0);
+  const avgRating     = courses.filter(c => c.averageRating > 0).reduce((a, c, _, arr) => a + c.averageRating / arr.length, 0);
+  const revenueData   = buildRevenueData(courses);
+  const BAR_COLORS    = ['#6c48f2','#a78bfa','#7c3aed','#8b5cf6','#4f46e5','#818cf8'];
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -60,9 +75,10 @@ const InstructorDashboard = () => {
         </div>
         <nav className="flex-1 px-4 space-y-1">
           {[
-            { label: 'Overview', icon: '📊', path: '/instructor/dashboard' },
-            { label: 'Create Course', icon: '➕', path: '/instructor/course-builder' },
-            { label: 'Grading Queue', icon: '✏️', path: '/instructor/grading' },
+            { label: 'Overview',     icon: '📊', path: '/instructor/dashboard' },
+            { label: 'Create Course',icon: '➕', path: '/instructor/course-builder' },
+            { label: 'Grading Queue',icon: '✏️', path: '/instructor/grading' },
+            { label: 'Warnings',     icon: '⚠️', path: '/instructor/warnings' },
           ].map(item => (
             <button key={item.path} onClick={() => navigate(item.path)}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm text-secondary hover:bg-gray-50 hover:text-textMain transition-all">
@@ -127,12 +143,16 @@ const InstructorDashboard = () => {
               <div className="h-[200px] flex items-center justify-center text-secondary text-sm">No course data yet.</div>
             ) : (
               <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={courses.slice(0, 6).map(c => ({ name: c.title?.slice(0, 14) + '...', students: c.enrollmentCount || 0 }))}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <BarChart data={courses.slice(0, 6).map((c, i) => ({ name: (c.title || '').slice(0, 12) + '…', students: c.enrollmentCount || 0, i }))}
+                  margin={{ top: 5, right: 5, bottom: 0, left: -20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #f0f0f0', fontSize: '13px' }} />
-                  <Bar dataKey="students" fill="#6c48f2" radius={[8, 8, 0, 0]} />
+                  <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #f0f0f0', fontSize: '13px' }}
+                    formatter={v => [`${v} students`, 'Enrolled']} />
+                  <Bar dataKey="students" radius={[8, 8, 0, 0]}>
+                    {courses.slice(0, 6).map((_, i) => <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />)}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             )}
