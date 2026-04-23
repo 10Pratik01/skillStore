@@ -46,6 +46,10 @@ public class CourseService {
         return courseRepository.save(course);
     }
 
+    public Course saveCourse(Course course) {
+        return courseRepository.save(course);
+    }
+
     public Course updateCourse(Long id, Course details) {
         Course course = getCourseById(id);
         if (details.getTitle() != null)       course.setTitle(details.getTitle());

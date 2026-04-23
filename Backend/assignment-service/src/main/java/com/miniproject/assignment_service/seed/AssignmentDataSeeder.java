@@ -47,17 +47,19 @@ public class AssignmentDataSeeder {
                 questionRepository.save(Question.builder()
                         .quizId(quiz.getId())
                         .text("Which annotation marks a class as a Spring REST controller?")
-                        .type("MCQ")
+                        .questionType("MCQ_SINGLE")
                         .options(List.of("@Service", "@Component", "@RestController", "@ControllerAdvice"))
-                        .correctAnswer("@RestController")
+                        .correctAnswer("2")
+                        .orderIndex(0)
                         .build());
 
                 questionRepository.save(Question.builder()
                         .quizId(quiz.getId())
                         .text("Dependency Injection helps reduce tight coupling in code.")
-                        .type("TRUE_FALSE")
-                        .options(List.of("TRUE", "FALSE"))
-                        .correctAnswer("TRUE")
+                        .questionType("MCQ_SINGLE")
+                        .options(List.of("True", "False"))
+                        .correctAnswer("0")
+                        .orderIndex(1)
                         .build());
             }
         };

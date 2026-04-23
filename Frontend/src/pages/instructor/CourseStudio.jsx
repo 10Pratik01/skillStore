@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
+import QuizBuilder from '../../components/quiz/QuizBuilder';
 
 const LESSON_TYPES = [
   { value: 'video', label: 'Video Lesson', icon: '🎬' },
@@ -27,12 +28,17 @@ const CourseStudio = () => {
   const [editCourse, setEditCourse] = useState({ title: '', subtitle: '', description: '' });
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const [selectedAccess, setSelectedAccess] = useState('PUBLIC');
+  const [accessCode, setAccessCode] = useState('');
+  const [accessSaving, setAccessSaving] = useState(false);
 
   const fetchCourse = async () => {
     try {
       const res = await axios.get(`/api/courses/${courseId}`);
       setCourse(res.data);
       setEditCourse({ title: res.data.title || '', subtitle: res.data.subtitle || '', description: res.data.description || '' });
+      setSelectedAccess(res.data.accessType || 'PUBLIC');
+      setAccessCode(res.data.accessCode || '');
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
@@ -127,9 +133,22 @@ const CourseStudio = () => {
   const handleSaveCourseInfo = async () => {
     try {
       await axios.put(`/api/courses/${courseId}`, editCourse);
-      fetchCourse();
+      await fetchCourse();
       alert('Course info saved!');
     } catch (e) { alert('Save failed'); }
+  };
+
+  const handleUpdateAccess = async () => {
+    setAccessSaving(true);
+    try {
+      await axios.patch(`/api/courses/${courseId}/access`, {
+        accessType: selectedAccess,
+        accessCode: selectedAccess === 'PASSWORD_PROTECTED' ? accessCode : null,
+      });
+      await fetchCourse();
+      alert('Access settings updated!');
+    } catch (e) { alert('Access update failed: ' + (e.response?.data?.message || e.message)); }
+    finally { setAccessSaving(false); }
   };
 
   const handleRemoveStudent = async (studentId) => {
@@ -310,6 +329,23 @@ const CourseStudio = () => {
                   </div>
                 </>
               )}
+
+              {/* Quiz builder — shown whenever Quiz type is active */}
+              {editLesson.type === 'quiz' && (
+                <div className="border-t border-gray-100 pt-6 mt-2">
+                  {selected?.data?.id ? (
+                    <QuizBuilder
+                      lesson={selected.data}
+                      courseId={courseId}
+                      user={user}
+                    />
+                  ) : (
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-700 font-semibold">
+                      💾 Save the lesson first, then the Quiz Builder will appear here.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -333,12 +369,12 @@ const CourseStudio = () => {
             <div className="space-y-4">
               <h4 className="font-extrabold text-textMain">Course Info</h4>
               <div><label className="block text-xs text-secondary font-bold uppercase tracking-wider mb-1.5">Title</label>
-                <input className="input-field text-sm" defaultValue={course?.title} /></div>
+                <input className="input-field text-sm" value={editCourse.title} onChange={e => setEditCourse(p => ({...p, title: e.target.value}))} /></div>
               <div><label className="block text-xs text-secondary font-bold uppercase tracking-wider mb-1.5">Subtitle</label>
-                <input className="input-field text-sm" defaultValue={course?.subtitle} /></div>
+                <input className="input-field text-sm" value={editCourse.subtitle} onChange={e => setEditCourse(p => ({...p, subtitle: e.target.value}))} /></div>
               <div><label className="block text-xs text-secondary font-bold uppercase tracking-wider mb-1.5">Description</label>
-                <textarea rows={4} className="input-field text-sm resize-none" defaultValue={course?.description} /></div>
-              <button className="btn-primary w-full text-sm shadow-soft-purple">Save Changes</button>
+                <textarea rows={4} className="input-field text-sm resize-none" value={editCourse.description} onChange={e => setEditCourse(p => ({...p, description: e.target.value}))} /></div>
+              <button onClick={handleSaveCourseInfo} className="btn-primary w-full text-sm shadow-soft-purple">Save Changes</button>
             </div>
           )}
 
@@ -350,19 +386,31 @@ const CourseStudio = () => {
                 <label className="block text-xs text-secondary font-bold uppercase tracking-wider mb-2">Access Type</label>
                 <div className="space-y-2">
                   {[['PUBLIC', '🌍 Public'], ['PASSWORD_PROTECTED', '🔒 Password Protected'], ['INVITE_ONLY', '✉️ Invite Only']].map(([val, label]) => (
-                    <label key={val} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${course?.accessType === val ? 'border-primary bg-primary/5' : 'border-gray-200'}`}>
-                      <input type="radio" name="access" value={val} defaultChecked={course?.accessType === val} className="accent-primary" />
+                    <label key={val} onClick={() => setSelectedAccess(val)}
+                      className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                        selectedAccess === val ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300'
+                      }`}>
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                        selectedAccess === val ? 'border-primary' : 'border-gray-300'
+                      }`}>
+                        {selectedAccess === val && <div className="w-2 h-2 rounded-full bg-primary" />}
+                      </div>
                       <span className="text-sm font-semibold text-textMain">{label}</span>
                     </label>
                   ))}
                 </div>
               </div>
-              {course?.accessType === 'PASSWORD_PROTECTED' && (
-                <div><label className="block text-xs text-secondary font-bold uppercase tracking-wider mb-1.5">Access Code</label>
-                  <input className="input-field font-mono tracking-widest" defaultValue={course?.accessCode} />
+              {selectedAccess === 'PASSWORD_PROTECTED' && (
+                <div>
+                  <label className="block text-xs text-secondary font-bold uppercase tracking-wider mb-1.5">Access Code</label>
+                  <input className="input-field font-mono tracking-widest" value={accessCode}
+                    onChange={e => setAccessCode(e.target.value)} placeholder="Set a password..." />
                 </div>
               )}
-              <button className="btn-primary w-full text-sm shadow-soft-purple">Update Access</button>
+              <button onClick={handleUpdateAccess} disabled={accessSaving}
+                className="btn-primary w-full text-sm shadow-soft-purple disabled:opacity-60">
+                {accessSaving ? 'Saving…' : 'Update Access'}
+              </button>
             </div>
           )}
 

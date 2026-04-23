@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import CommentThread from '../CommentThread';
+import QuizPlayer from '../quiz/QuizPlayer';
+import QuizSection from '../quiz/QuizSection';
 
 // ── Standalone Assignment Section ─────────────────────────────────────────────
 // Handles: load past submission, show grade, edit before due, resubmit after due
@@ -351,71 +353,8 @@ const LessonContent = ({ lesson, assignments, quizzes, user, courseId, onMarkCom
 
   // ── QUIZ ───────────────────────────────────────────────────────────────────
   if (lesson.type === 'quiz') {
-    const quizData = quizzes.find(q => q.lessonId === lesson.id);
-
-    const handleQuizSubmit = async () => {
-      setSubmitting(true);
-      try {
-        await axios.post(`/api/quizzes/${quizData?.id}/attempt`, { studentId: user?.id || 1, courseId, answers: quizAnswers });
-        setQuizResult({ score: 85, total: 100 });
-        onMarkComplete(lesson.id);
-      } catch (e) { console.error(e); }
-      finally { setSubmitting(false); }
-    };
-
-    return (
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-8 max-w-3xl mx-auto">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center text-xl">❓</div>
-            <div>
-              <span className="text-xs font-extrabold uppercase tracking-widest text-purple-600 block">Quiz</span>
-              <h1 className="text-2xl font-extrabold text-textMain">{lesson.title}</h1>
-            </div>
-          </div>
-
-          {quizResult ? (
-            <div className="bg-green-50 border border-green-200 rounded-3xl p-12 text-center">
-              <div className="text-6xl mb-4">🎉</div>
-              <h2 className="text-3xl font-extrabold text-green-700 mb-2">Quiz Complete!</h2>
-              <p className="text-green-600 text-lg">Great work on finishing this quiz.</p>
-            </div>
-          ) : (quizData?.questions || []).length > 0 ? (
-            <div className="space-y-6">
-              {quizData.questions.map((q, qi) => (
-                <div key={qi} className="bg-white border border-gray-100 rounded-3xl p-6 shadow-soft">
-                  <p className="font-bold text-textMain mb-4">{qi + 1}. {q.text}</p>
-                  <div className="space-y-2">
-                    {(q.options || []).map((opt, oi) => (
-                      <label key={oi} className={`flex items-center gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all ${quizAnswers[qi] === oi ? 'border-primary bg-primary/5' : 'border-gray-100 hover:border-gray-200'}`}>
-                        <input type="radio" name={`q${qi}`} className="hidden" onChange={() => setQuizAnswers(prev => ({ ...prev, [qi]: oi }))} />
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${quizAnswers[qi] === oi ? 'border-primary' : 'border-gray-300'}`}>
-                          {quizAnswers[qi] === oi && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
-                        </div>
-                        <span className="text-sm text-textMain">{opt}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              <button onClick={handleQuizSubmit} disabled={submitting} className="btn-primary w-full py-4 text-base shadow-soft-purple disabled:opacity-50">
-                {submitting ? 'Submitting...' : 'Submit Quiz →'}
-              </button>
-            </div>
-          ) : (
-            <div className="bg-white border border-gray-100 rounded-3xl p-12 text-center shadow-soft">
-              <div className="text-5xl mb-4">📝</div>
-              <h3 className="text-xl font-extrabold text-textMain mb-3">Ready to take the quiz?</h3>
-              <p className="text-secondary mb-8">Make sure you've reviewed all the material in this section.</p>
-              <button onClick={handleQuizSubmit} disabled={submitting} className="btn-primary px-10 py-4 shadow-soft-purple disabled:opacity-50">
-                {submitting ? 'Submitting...' : 'Start Quiz Now →'}
-              </button>
-            </div>
-          )}
-          <CommentThread lessonId={lesson.id} courseId={courseId} currentUser={user} />
-        </div>
-      </div>
-    );
+    // QuizSection is self-fetching — finds the quiz for this lesson directly
+    return <QuizSection lesson={lesson} user={user} courseId={courseId} onMarkComplete={onMarkComplete} />;
   }
 
   return null;

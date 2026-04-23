@@ -86,6 +86,22 @@ public class CourseController {
         return ResponseEntity.ok(courseService.updateCourseStatus(id, status));
     }
 
+    @PatchMapping("/{id}/access")
+    public ResponseEntity<Course> updateCourseAccess(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> payload) {
+        Course course = courseService.getCourseById(id);
+        if (payload.containsKey("accessType")) {
+            course.setAccessType((String) payload.get("accessType"));
+        }
+        if (payload.containsKey("accessCode")) {
+            Object code = payload.get("accessCode");
+            course.setAccessCode(code != null ? code.toString() : null);
+        }
+        return ResponseEntity.ok(courseService.saveCourse(course));
+    }
+
+
     // ── Section CRUD ──────────────────────────────────────────────────────────
     @PostMapping("/{id}/sections")
     public ResponseEntity<Section> addSection(@PathVariable Long id, @RequestBody Section section) {
